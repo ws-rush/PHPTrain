@@ -1,0 +1,12 @@
+{
+    "db": {
+        "host" : "localhost",
+        "dbname": "testo",
+        "user": "root",
+        "password": ""
+    },
+    "errors": {
+        "304": ["index.php", "أنت لا تملك الصلاحيات، الرجاء تسجيل دخولك"],
+        "404": ["404.php"]
+    }
+}
