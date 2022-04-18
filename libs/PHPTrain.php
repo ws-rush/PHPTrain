@@ -1,9 +1,25 @@
 <?php
 
 // import config
+/*
+	* synax of config should be like this 
+{
+    "db": {
+        "host" : "localhost",
+        "dbname": "testo",
+        "user": "root",
+        "password": ""
+    },
+    "errors": {
+        "304": ["index.php", "أنت لا تملك الصلاحيات، الرجاء تسجيل دخولك"],
+        "404": ["404.php"]
+    }
+}
+*/
 $config = json_decode(file_get_contents(__DIR__ . "/config.json"), true);
 
-######################################## snippets ################################################
+######################################## snippets start ################################################
+// call an error page from config, like `err(404)`
 function err($num)
 {
     global $config;
@@ -24,6 +40,7 @@ function get_message()
     return $message;
 }
 
+// stor a spesfic files in spesfic folder, `store_files($_FILES, './assets', false)`
 function store_files($files, $dir, $keep_tmp_name = true)
 {
     $names = [];
@@ -49,7 +66,7 @@ function store_files($files, $dir, $keep_tmp_name = true)
 
 ######################################## snippets end ############################################
 
-###################################### validate class ######################################################
+###################################### validate class start ######################################################
 class Validate
 {
     function isEmail($text)
@@ -67,80 +84,60 @@ class Validate
 
 ###################################### validate class end ###################################################
 
-###################################### controller class #####################################################
+###################################### controller class start #####################################################
 
+/*
+	* this class built to build buissnes layer, code should be like this:
+
+```php
+// import phptrain
+class Products extends Controller {
+	public function get($data) {
+		echo "$data['search']";
+	}
+}
+
+new Products(); // build class and call right method for right rquest
+```
+
+	* class constructor may take 'api' as parameter, to specify how class send response 
+*/
 class Controller
 {
-
-    private $privilages;
-
-    function __construct($type, $privilages = ["all" => null, "get" => null, "post" => null, "put" => null, "delete" => null])
+    function __construct($type="web")
     {
-        if ($type == "web") {
-            $this->privilages = $privilages;
-        } elseif ($type = "api")
+        if ($type == "api") {
             header('Content-Type: application/json');
-        else
-            throw new Exception("you didnt specify your application type correctly");
+        
+        switch ($_SERVER['REQUEST_METHOD']) {
+			case 'GET':
+				$this->get($_GET);
+				break;
+			case 'POST':
+				$this->post(array_merge($_POST, $_FILES));
+				break;
+			case 'PUT':
+				parse_str(file_get_contents("php://input"), $_PUT);
+            	$this->put($_PUT);
+				break;
+			case 'DELETE':
+				parse_str(file_get_contents("php://input"), $_DELETE);
+            	$this->delete($_DELETE);
+				break;
+			default:
+				throw new Exception("header type request doesnt supported yet");
+		}
     }
 
-    function get($_Data)
-    {
-        echo "this is get from controller";
-    }
-
-    function post($_Data)
-    {
-        echo "this is post from controller";
-    }
-
-    function put($_Data)
-    {
-        echo "this is put from controller";
-    }
-
-    function delete($_Data)
-    {
-        echo "this is delete from controller";
-    }
-
-    function auth($method)
-    {
-        $user = $this->privilages[$method];
-
-        if (!$user)
-            return 0;
-
-        if (empty($_SESSION['user'][$user->get_role()]))
-            err("304");
-    }
-
-    function run()
-    {
-        $this->auth('all');
-
-
-        if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-            $this->auth('get');
-            $this->get($_GET);
-        } else if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $this->auth('post');
-            $this->post(array_merge($_POST, $_FILES));
-        } else if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
-            $this->auth('put');
-            parse_str(file_get_contents("php://input"), $_PUT);
-            $this->put($_PUT);
-        } else if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
-            $this->auth('delete');
-            parse_str(file_get_contents("php://input"), $_DELETE);
-            $this->delete($_DELETE);
-        }
-    }
+    abstract protected function get($_Data);
+    abstract protected function post($_Data);
+    abstract protected function put($_Data);
+    abstract protected function delete($_Data);
 }
 
 ############################################ controler class end ##############################################
 
-############################################ Model class #######################################################
+############################################ Model class start #######################################################
 
 // init database
 $host = $config['db']['host'];
